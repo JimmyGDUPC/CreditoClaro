@@ -2,11 +2,10 @@
 
 CréditoClaro es un simulador de crédito para una caja municipal peruana. Permite estimar cuotas mensuales por el método francés, revisar el cronograma de pagos, descargarlo en PDF y obtener una orientación referencial de elegibilidad.
 
+🔗 **Demo:** https://jimmygdupc.github.io/CreditoClaro/
+
 ## Problemática
-En la entidad, el cliente no conoce cuota, costo total (TCEA) ni requisitos
-hasta llegar a la agencia. Esto genera atenciones de 15 a 20 minutos solo para
-explicar cálculos, visitas sin documentos completos y llamadas constantes para
-consultar el estado del trámite.
+En la entidad, el cliente no conoce cuota, costo total (TCEA) ni requisitos hasta llegar a la agencia. Esto genera atenciones de 15 a 20 minutos solo para explicar cálculos, visitas sin documentos completos y llamadas constantes para consultar el estado del trámite.
 
 ## Usuario objetivo
 - **Cliente potencial:** persona de 25 a 55 años con ingresos propios.
@@ -25,7 +24,6 @@ registre una pre-solicitud y consulte su avance antes de acudir a la agencia.
 6. Panel del asesor con filtros y cambio de estado
 
 ## Ejecutar localmente
-
 La aplicación es un sitio estático de un solo archivo y no requiere instalar dependencias ni compilarlo.
 1. Descarga o clona este repositorio.
 2. Abre `index.html` directamente en un navegador moderno.
@@ -41,6 +39,10 @@ Luego abre <http://localhost:8000>.
 ## Publicación
 
 GitHub Actions valida el HTML en los pull requests y publica `index.html` en GitHub Pages cuando los cambios llegan a `main`.
+Las cuotas y la evaluación de elegibilidad son estimaciones referenciales; no constituyen una oferta ni una aprobación de crédito.
+
+## Limitaciones
+- Resultados referenciales, sin evaluación crediticia oficial.
 
 Las cuotas y la evaluación de elegibilidad son estimaciones referenciales; no constituyen una oferta ni una aprobación de crédito.
 
