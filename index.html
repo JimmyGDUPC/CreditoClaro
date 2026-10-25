@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f8f6">
+  <title>CréditoClaro | Simula tu crédito</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17352d;
+      --muted: #667a73;
+      --green: #167354;
+      --green-dark: #10583f;
+      --mint: #e9f4ee;
+      --line: #e3eae6;
+      --paper: #fff;
+      --bg: #f5f8f6;
+      --amber: #8a5a0a;
+      --amber-bg: #fff5df;
+      --red: #a53d35;
+      --red-bg: #fff0ed;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .topbar { background: var(--paper); border-bottom: 1px solid var(--line); }
+    .nav { width: min(1120px, calc(100% - 40px)); height: 72px; margin: auto; display: flex; align-items: center; justify-content: space-between; }
+    .brand { display: flex; align-items: center; gap: 11px; font-size: 18px; font-weight: 750; letter-spacing: -.5px; }
+    .brand-mark { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 11px; background: var(--green); color: white; font-size: 19px; }
+    .brand span:last-child { color: var(--green); }
+    .nav-note { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+    .secure-dot { width: 8px; height: 8px; background: #43a779; border-radius: 50%; }
+    main { width: min(1120px, calc(100% - 40px)); margin: 0 auto; padding: 43px 0 64px; }
+    .intro { margin-bottom: 28px; }
+    .eyebrow { color: var(--green); font-size: 12px; font-weight: 750; letter-spacing: 1.35px; text-transform: uppercase; }
+    h1 { margin: 9px 0 7px; font-size: clamp(29px, 4vw, 40px); letter-spacing: -1.5px; line-height: 1.12; }
+    .intro p { margin: 0; color: var(--muted); font-size: 15px; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(325px, .92fr); align-items: start; gap: 20px; }
+    .card { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 5px 20px rgb(27 62 48 / 4%); }
+    .sim-card { overflow: hidden; }
+    .card-head { padding: 22px 24px 17px; border-bottom: 1px solid var(--line); }
+    .card-head h2 { margin: 0 0 5px; font-size: 18px; letter-spacing: -.35px; }
+    .card-head p { margin: 0; color: var(--muted); font-size: 13px; }
+    .sim-body { padding: 23px 24px 24px; }
+    .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 16px; }
+    .field label { display: block; margin-bottom: 8px; color: #40584f; font-size: 12px; font-weight: 700; }
+    .input-wrap { display: flex; height: 46px; align-items: center; border: 1px solid #dce5e0; border-radius: 9px; background: white; transition: border-color .15s, box-shadow .15s; }
+    .input-wrap:focus-within { border-color: var(--green); box-shadow: 0 0 0 3px rgb(22 115 84 / 10%); }
+    .prefix, .suffix { padding: 0 12px; color: #75877f; font-size: 13px; white-space: nowrap; }
+    .input-wrap input { width: 100%; min-width: 0; height: 100%; padding: 0 12px; border: 0; outline: 0; background: transparent; color: var(--ink); font-size: 15px; font-weight: 650; }
+    .prefix + input { padding-left: 0; }
+    .field-hint { display: block; margin-top: 6px; color: #84948d; font-size: 11px; }
+    .range-row { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+    input[type="range"] { width: 100%; accent-color: var(--green); }
+    .range-value { min-width: 58px; color: var(--green); font-size: 12px; font-weight: 750; text-align: right; }
+    .result { margin-top: 23px; padding: 19px 20px; border-radius: 12px; background: var(--mint); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .result-label { color: #45675a; font-size: 12px; font-weight: 650; }
+    .result-amount { margin-top: 4px; color: var(--green-dark); font-size: clamp(25px, 3.5vw, 32px); font-weight: 800; letter-spacing: -1px; }
+    .result-side { text-align: right; }
+    .result-side strong { display: block; color: var(--green-dark); font-size: 14px; }
+    .result-side span { display: block; margin-top: 4px; color: #587166; font-size: 11px; }
+    .totals { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+    .total-box { padding: 13px 14px; border: 1px solid var(--line); border-radius: 10px; }
+    .total-box span { display: block; color: var(--muted); font-size: 11px; }
+    .total-box strong { display: block; margin-top: 5px; font-size: 15px; }
+    .schedule-toggle { display: flex; width: 100%; justify-content: space-between; align-items: center; margin-top: 20px; padding: 12px 0 0; border: 0; border-top: 1px solid var(--line); background: none; color: var(--green-dark); font-size: 13px; font-weight: 700; text-align: left; }
+    .schedule-toggle .chevron { transition: transform .2s; }
+    .schedule-toggle[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+    .table-wrap { overflow-x: auto; margin-top: 12px; }
+    table { width: 100%; border-collapse: collapse; white-space: nowrap; font-size: 11px; }
+    th, td { padding: 10px 8px; border-bottom: 1px solid #edf1ee; text-align: right; }
+    th { color: var(--muted); font-weight: 650; }
+    th:first-child, td:first-child { text-align: left; }
+    .elig-card { padding: 22px 22px 20px; }
+    .elig-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 20px; }
+    .elig-icon { flex: 0 0 38px; height: 38px; display: grid; place-items: center; border-radius: 11px; background: #eef5f1; color: var(--green); font-size: 18px; }
+    .elig-head h2 { margin: 0 0 4px; font-size: 17px; letter-spacing: -.3px; }
+    .elig-head p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .elig-fields { display: grid; gap: 15px; }
+    .elig-result { margin-top: 20px; padding: 15px; border: 1px solid #cde5d7; border-radius: 11px; background: #f0f8f3; }
+    .elig-result.review { border-color: #f0dfb5; background: var(--amber-bg); }
+    .elig-result.no { border-color: #f0c9c3; background: var(--red-bg); }
+    .elig-status { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 750; }
+    .elig-result.good .elig-status { color: var(--green-dark); }
+    .elig-result.review .elig-status { color: var(--amber); }
+    .elig-result.no .elig-status { color: var(--red); }
+    .status-icon { display: grid; width: 22px; height: 22px; place-items: center; border-radius: 50%; background: rgb(255 255 255 / 75%); }
+    .burden { display: flex; justify-content: space-between; margin-top: 13px; color: #53685f; font-size: 12px; }
+    .bar { height: 6px; overflow: hidden; margin-top: 7px; border-radius: 10px; background: rgb(23 53 45 / 10%); }
+    .bar-fill { width: 0; height: 100%; border-radius: inherit; background: var(--green); transition: width .25s; }
+    .review .bar-fill { background: #d49522; }
+    .no .bar-fill { background: #c75247; }
+    .elig-message { margin: 10px 0 0; color: #62776d; font-size: 11px; line-height: 1.5; }
+    .disclaimer { display: flex; gap: 9px; margin-top: 15px; padding: 12px; border-radius: 9px; background: #f6f8f7; color: #77877f; font-size: 10px; line-height: 1.5; }
+    .disclaimer b { color: #586d63; }
+    .foot { margin-top: 22px; color: #84928c; font-size: 11px; text-align: center; }
+    [hidden] { display: none !important; }
+    @media (max-width: 780px) {
+      main { padding-top: 32px; }
+      .layout { grid-template-columns: 1fr; }
+      .elig-card { order: -1; }
+    }
+    @media (max-width: 500px) {
+      .nav, main { width: min(100% - 28px, 1120px); }
+      .nav { height: 62px; }
+      .nav-note { font-size: 11px; }
+      main { padding-top: 26px; }
+      .fields { gap: 15px 11px; }
+      .card-head { padding: 19px 18px 15px; }
+      .sim-body { padding: 19px 18px; }
+      .elig-card { padding: 19px 18px; }
+      .field label { font-size: 11px; }
+      .result { padding: 16px; }
+      .totals { gap: 9px; }
+      .total-box { padding: 11px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <nav class="nav" aria-label="Navegación principal">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">↗</span><span>Crédito<span>Claro</span></span></div>
+      <div class="nav-note"><span class="secure-dot" aria-hidden="true"></span> Simulación gratuita y referencial</div>
+    </nav>
+  </header>
+  <main>
+    <section class="intro">
+      <div class="eyebrow">Tu próximo paso empieza aquí</div>
+      <h1>Simula tu crédito</h1>
+      <p>Calcula tus cuotas y conoce tu nivel de endeudamiento en minutos.</p>
+    </section>
+
+    <div class="layout">
+      <section class="card sim-card" aria-labelledby="sim-title">
+        <div class="card-head">
+          <h2 id="sim-title">Simulador de crédito</h2>
+          <p>Ajusta los datos para ver una estimación de tus pagos.</p>
+        </div>
+        <div class="sim-body">
+          <div class="fields">
+            <div class="field">
+              <label for="amount">Monto del crédito</label>
+              <div class="input-wrap"><span class="prefix" aria-hidden="true">S/</span><input id="amount" type="number" min="500" max="200000" step="500" value="10000" inputmode="decimal" aria-describedby="amount-hint"></div>
+              <span class="field-hint" id="amount-hint">Desde S/ 500 hasta S/ 200,000</span>
+            </div>
+            <div class="field">
+              <label for="term">Plazo</label>
+              <div class="input-wrap"><input id="term" type="number" min="6" max="60" step="1" value="24" inputmode="numeric"><span class="suffix">meses</span></div>
+              <div class="range-row"><input id="term-range" type="range" min="6" max="60" step="1" value="24" aria-label="Plazo en meses"><span class="range-value" id="term-value">24 meses</span></div>
+            </div>
+            <div class="field">
+              <label for="tea">Tasa efectiva anual (TEA)</label>
+              <div class="input-wrap"><input id="tea" type="number" min="0" max="100" step="0.1" value="24" inputmode="decimal"><span class="suffix">% anual</span></div>
+              <span class="field-hint">La TEA se convierte a tasa efectiva mensual</span>
+            </div>
+          </div>
+          <div class="result" aria-live="polite">
+            <div><div class="result-label">Tu cuota mensual estimada</div><div class="result-amount" id="monthly-payment">S/ 0.00</div></div>
+            <div class="result-side"><strong id="monthly-rate">0.00% mensual</strong><span>Método francés · cuota fija</span></div>
+          </div>
+          <div class="totals">
+            <div class="total-box"><span>Interés total estimado</span><strong id="total-interest">S/ 0.00</strong></div>
+            <div class="total-box"><span>Total a pagar</span><strong id="total-payment">S/ 0.00</strong></div>
+          </div>
+          <button class="schedule-toggle" id="schedule-toggle" type="button" aria-expanded="false" aria-controls="schedule-panel"><span>Ver cronograma de pagos</span><span class="chevron" aria-hidden="true">⌄</span></button>
+          <div class="table-wrap" id="schedule-panel" hidden>
+            <table>
+              <thead><tr><th>Mes</th><th>Cuota</th><th>Capital</th><th>Interés</th><th>Saldo</th></tr></thead>
+              <tbody id="schedule-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="card elig-card" aria-labelledby="elig-title">
+        <div class="elig-head">
+          <div class="elig-icon" aria-hidden="true">✓</div>
+          <div><h2 id="elig-title">Verifica tu elegibilidad</h2><p>Una orientación rápida, sin afectar tu historial crediticio.</p></div>
+        </div>
+        <div class="elig-fields">
+          <div class="field">
+            <label for="income">Ingreso mensual neto</label>
+            <div class="input-wrap"><span class="prefix" aria-hidden="true">S/</span><input id="income" type="number" min="0" step="100" value="3000" inputmode="decimal"></div>
+          </div>
+          <div class="field">
+            <label for="debts">Cuotas de deudas actuales al mes</label>
+            <div class="input-wrap"><span class="prefix" aria-hidden="true">S/</span><input id="debts" type="number" min="0" step="50" value="300" inputmode="decimal"></div>
+          </div>
+          <div class="field">
+            <label for="tenure">Antigüedad laboral</label>
+            <div class="input-wrap"><input id="tenure" type="number" min="0" max="60" step="1" value="12" inputmode="numeric"><span class="suffix">meses</span></div>
+          </div>
+        </div>
+        <div class="elig-result good" id="elig-result" aria-live="polite">
+          <div class="elig-status"><span class="status-icon" id="status-icon" aria-hidden="true">✓</span><span id="status-text">Apto</span></div>
+          <div class="burden"><span>Relación cuota / ingreso</span><strong id="burden-value">0%</strong></div>
+          <div class="bar" role="meter" aria-label="Relación cuota e ingreso" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="bar-fill" id="bar-fill"></div></div>
+          <p class="elig-message" id="elig-message">Tu capacidad de pago se ve saludable para esta simulación.</p>
+        </div>
+        <div class="disclaimer"><span aria-hidden="true">ⓘ</span><span>Este resultado es <b>referencial</b>, considera la cuota simulada más tus deudas actuales. La evaluación final depende de la revisión de documentos y políticas de la caja municipal.</span></div>
+      </section>
+    </div>
+    <div class="foot">CréditoClaro · Información referencial en soles peruanos (PEN)</div>
+  </main>
+  <script>
+    (() => {
+      const $ = (id) => document.getElementById(id);
+      const amountInput = $("amount");
+      const termInput = $("term");
+      const termRange = $("term-range");
+      const teaInput = $("tea");
+      const money = new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN", minimumFractionDigits: 2 });
+
+      function validNumber(input, min, max) {
+        const value = Number(input.value);
+        return input.value !== "" && Number.isFinite(value) && value >= min && value <= max;
+      }
+
+      function calculate() {
+        const validAmount = validNumber(amountInput, 500, 200000);
+        const validTerm = validNumber(termInput, 6, 60);
+        const validTea = validNumber(teaInput, 0, 100);
+        if (!validAmount || !validTerm || !validTea) {
+          for (const input of [amountInput, termInput, teaInput]) {
+            const ranges = input === amountInput ? [500, 200000] : input === termInput ? [6, 60] : [0, 100];
+            input.setAttribute("aria-invalid", String(!validNumber(input, ...ranges)));
+          }
+          $("schedule-body").replaceChildren();
+          $("monthly-payment").textContent = "—";
+          $("monthly-rate").textContent = "Revisa los datos";
+          $("total-interest").textContent = "—";
+          $("total-payment").textContent = "—";
+          updateEligibility(null);
+          return;
+        }
+        for (const input of [amountInput, termInput, teaInput]) input.setAttribute("aria-invalid", "false");
+        const principal = Number(amountInput.value);
+        const months = Math.round(Number(termInput.value));
+        const tea = Number(teaInput.value) / 100;
+        const monthlyRate = Math.pow(1 + tea, 1 / 12) - 1;
+        const payment = monthlyRate === 0
+          ? principal / months
+          : principal * monthlyRate / (1 - Math.pow(1 + monthlyRate, -months));
+        $("monthly-payment").textContent = money.format(payment);
+        $("monthly-rate").textContent = `${(monthlyRate * 100).toFixed(2)}% mensual`;
+        $("total-payment").textContent = money.format(payment * months);
+        $("total-interest").textContent = money.format(payment * months - principal);
+
+        let balance = principal;
+        const rows = [];
+        for (let month = 1; month <= months; month += 1) {
+          const interest = balance * monthlyRate;
+          const capital = Math.min(balance, payment - interest);
+          balance = Math.max(0, balance - capital);
+          rows.push(`<tr><td>${month}</td><td>${money.format(payment)}</td><td>${money.format(capital)}</td><td>${money.format(interest)}</td><td>${money.format(balance)}</td></tr>`);
+        }
+        $("schedule-body").innerHTML = rows.join("");
+        updateEligibility(payment);
+      }
+
+      function updateEligibility(payment) {
+        const incomeInput = $("income");
+        const debtsInput = $("debts");
+        const tenureInput = $("tenure");
+        const result = $("elig-result");
+        const income = Number(incomeInput.value);
+        const debts = Number(debtsInput.value);
+        const tenure = Number(tenureInput.value);
+        const valid = [incomeInput, debtsInput, tenureInput].every((el) => el.value !== "" && Number.isFinite(Number(el.value)) && Number(el.value) >= 0);
+        const rate = valid && income > 0 && payment !== null ? (debts + payment) / income : null;
+        let status, message, type, icon;
+        if (!valid || income <= 0 || rate === null) {
+          status = "Completa los datos"; message = "Ingresa un ingreso válido y datos de crédito dentro de los rangos para calcular tu nivel de endeudamiento."; type = "review"; icon = "!";
+        } else if (rate > 0.4 || tenure < 3) {
+          status = "No apto por ahora"; message = rate > 0.4 ? "La suma de tus cuotas supera el 40% de tu ingreso mensual. Considera reducir el monto o tus deudas." : "Una antigüedad laboral menor a 3 meses puede requerir más estabilidad laboral antes de solicitar el crédito."; type = "no"; icon = "×";
+        } else if (rate > 0.3 || tenure < 6) {
+          status = "Revisar con asesor"; message = rate > 0.3 ? "Tu nivel de endeudamiento está entre 30% y 40%. Un asesor puede revisar alternativas según tu perfil." : "Tu antigüedad laboral es menor a 6 meses. Consulta con un asesor qué documentos puedes presentar."; type = "review"; icon = "!";
+        } else {
+          status = "Apto"; message = "Tu capacidad de pago se ve saludable para esta simulación."; type = "good"; icon = "✓";
+        }
+        result.className = `elig-result ${type}`;
+        $("status-icon").textContent = icon;
+        $("status-text").textContent = status;
+        $("elig-message").textContent = message;
+        $("burden-value").textContent = rate === null ? "—" : `${(rate * 100).toFixed(1)}%`;
+        const meterValue = rate === null ? 0 : Math.max(0, Math.min(rate * 100, 100));
+        $("bar-fill").style.width = `${meterValue}%`;
+        result.querySelector('[role="meter"]').setAttribute("aria-valuenow", meterValue.toFixed(1));
+      }
+
+      for (const input of [amountInput, termInput, teaInput, $("income"), $("debts"), $("tenure")]) {
+        input.addEventListener("input", calculate);
+      }
+      termRange.addEventListener("input", () => {
+        termInput.value = termRange.value;
+        $("term-value").textContent = `${termRange.value} meses`;
+        calculate();
+      });
+      termInput.addEventListener("input", () => {
+        const value = Number(termInput.value);
+        if (value >= 6 && value <= 60) termRange.value = String(value);
+        $("term-value").textContent = termInput.value ? `${termInput.value} meses` : "— meses";
+      });
+      $("schedule-toggle").addEventListener("click", (event) => {
+        const button = event.currentTarget;
+        const expanded = button.getAttribute("aria-expanded") === "true";
+        button.setAttribute("aria-expanded", String(!expanded));
+        $("schedule-panel").hidden = expanded;
+        button.querySelector("span:first-child").textContent = expanded ? "Ver cronograma de pagos" : "Ocultar cronograma de pagos";
+      });
+      calculate();
+    })();
+  </script>
+</body>
+</html>
