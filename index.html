@@ -68,7 +68,14 @@
     .total-box { padding: 13px 14px; border: 1px solid var(--line); border-radius: 10px; }
     .total-box span { display: block; color: var(--muted); font-size: 11px; }
     .total-box strong { display: block; margin-top: 5px; font-size: 15px; }
+    .schedule-actions { display: flex; gap: 12px; margin-top: 20px; }
     .schedule-toggle { display: flex; width: 100%; justify-content: space-between; align-items: center; margin-top: 20px; padding: 12px 0 0; border: 0; border-top: 1px solid var(--line); background: none; color: var(--green-dark); font-size: 13px; font-weight: 700; text-align: left; }
+    .schedule-actions .schedule-toggle { flex: 1; width: auto; min-width: 0; margin-top: 0; }
+    .pdf-download { flex: 0 0 auto; padding: 12px 14px; border: 1px solid var(--green); border-radius: 9px; background: white; color: var(--green-dark); font-size: 12px; font-weight: 700; }
+    .pdf-download:hover:not(:disabled) { background: var(--mint); }
+    .pdf-download:focus-visible, .schedule-toggle:focus-visible { outline: 3px solid rgb(22 115 84 / 25%); outline-offset: 3px; }
+    .pdf-download:disabled { cursor: not-allowed; opacity: .5; }
+    .pdf-status { min-height: 16px; margin: 8px 0 0; color: var(--muted); font-size: 11px; }
     .schedule-toggle .chevron { transition: transform .2s; }
     .schedule-toggle[aria-expanded="true"] .chevron { transform: rotate(180deg); }
     .table-wrap { overflow-x: auto; margin-top: 12px; }
@@ -167,7 +174,11 @@
             <div class="total-box"><span>Interés total estimado</span><strong id="total-interest">S/ 0.00</strong></div>
             <div class="total-box"><span>Total a pagar</span><strong id="total-payment">S/ 0.00</strong></div>
           </div>
-          <button class="schedule-toggle" id="schedule-toggle" type="button" aria-expanded="false" aria-controls="schedule-panel"><span>Ver cronograma de pagos</span><span class="chevron" aria-hidden="true">⌄</span></button>
+          <div class="schedule-actions">
+            <button class="schedule-toggle" id="schedule-toggle" type="button" aria-expanded="false" aria-controls="schedule-panel"><span>Ver cronograma de pagos</span><span class="chevron" aria-hidden="true">⌄</span></button>
+            <button class="pdf-download" id="pdf-download" type="button" disabled>Descargar PDF</button>
+          </div>
+          <p class="pdf-status" id="pdf-status" role="status" aria-live="polite"></p>
           <div class="table-wrap" id="schedule-panel" hidden>
             <table>
               <thead><tr><th>Mes</th><th>Cuota</th><th>Capital</th><th>Interés</th><th>Saldo</th></tr></thead>
@@ -215,6 +226,7 @@
       const termRange = $("term-range");
       const teaInput = $("tea");
       const money = new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN", minimumFractionDigits: 2 });
+      let currentSchedule = [];
 
       function validNumber(input, min, max) {
         const value = Number(input.value);
@@ -226,6 +238,8 @@
         const validTerm = validNumber(termInput, 6, 60);
         const validTea = validNumber(teaInput, 0, 100);
         if (!validAmount || !validTerm || !validTea) {
+          currentSchedule = [];
+          $("pdf-download").disabled = true;
           for (const input of [amountInput, termInput, teaInput]) {
             const ranges = input === amountInput ? [500, 200000] : input === termInput ? [6, 60] : [0, 100];
             input.setAttribute("aria-invalid", String(!validNumber(input, ...ranges)));
@@ -252,15 +266,116 @@
         $("total-interest").textContent = money.format(payment * months - principal);
 
         let balance = principal;
-        const rows = [];
+        currentSchedule = [];
         for (let month = 1; month <= months; month += 1) {
           const interest = balance * monthlyRate;
           const capital = Math.min(balance, payment - interest);
           balance = Math.max(0, balance - capital);
-          rows.push(`<tr><td>${month}</td><td>${money.format(payment)}</td><td>${money.format(capital)}</td><td>${money.format(interest)}</td><td>${money.format(balance)}</td></tr>`);
+          currentSchedule.push({ month, payment, capital, interest, balance });
         }
-        $("schedule-body").innerHTML = rows.join("");
+        $("schedule-body").innerHTML = currentSchedule.map((row) => `<tr><td>${row.month}</td><td>${money.format(row.payment)}</td><td>${money.format(row.capital)}</td><td>${money.format(row.interest)}</td><td>${money.format(row.balance)}</td></tr>`).join("");
+        $("pdf-download").disabled = false;
         updateEligibility(payment);
+      }
+
+      function encodePdfText(value) {
+        const winAnsiExtras = { "€": 0x80, "‚": 0x82, "ƒ": 0x83, "„": 0x84, "…": 0x85, "†": 0x86, "‡": 0x87, "ˆ": 0x88, "‰": 0x89, "Š": 0x8a, "‹": 0x8b, "Œ": 0x8c, "Ž": 0x8e, "‘": 0x91, "’": 0x92, "“": 0x93, "”": 0x94, "•": 0x95, "–": 0x96, "—": 0x97, "˜": 0x98, "™": 0x99, "š": 0x9a, "›": 0x9b, "œ": 0x9c, "ž": 0x9e, "Ÿ": 0x9f };
+        return Array.from(String(value), (character) => {
+          const code = character.codePointAt(0);
+          const byte = winAnsiExtras[character] ?? (code <= 0x7f || (code >= 0xa0 && code <= 0xff) ? code : 0x3f);
+          return byte.toString(16).padStart(2, "0");
+        }).join("").toUpperCase();
+      }
+
+      function createSchedulePdf() {
+        const encode = (value) => new TextEncoder().encode(value);
+        const columns = [42, 92, 210, 316, 422, 553];
+        const drawTableHeader = (top, drawText, drawLine) => {
+          const labels = ["Mes", "Cuota", "Capital", "Interés", "Saldo"];
+          labels.forEach((label, index) => drawText(columns[index] + 4, top - 14, 9, label));
+          drawLine(columns[0], top - 20, columns[5], top - 20);
+        };
+        const pages = [];
+        const firstPageRows = 25;
+        const nextPageRows = 30;
+        let offset = 0;
+        while (offset < currentSchedule.length) {
+          const isFirstPage = pages.length === 0;
+          const pageRows = currentSchedule.slice(offset, offset + (isFirstPage ? firstPageRows : nextPageRows));
+          const content = [];
+          const pageText = (x, y, size, value) => content.push(`BT /F1 ${size} Tf ${x} ${y} Td <${encodePdfText(value)}> Tj ET\n`);
+          const pageLine = (x1, y1, x2, y2) => content.push(`${x1} ${y1} m ${x2} ${y2} l S\n`);
+          pageText(42, 798, 18, "CréditoClaro");
+          pageText(42, 777, 11, isFirstPage ? "Cronograma de pagos · Método francés" : "Cronograma de pagos · continuación");
+          if (isFirstPage) {
+            const amount = Number(amountInput.value);
+            const months = Number(termInput.value);
+            const tea = Number(teaInput.value);
+            const monthlyPayment = currentSchedule[0].payment;
+            const totalInterest = currentSchedule.reduce((sum, row) => sum + row.interest, 0);
+            pageText(42, 748, 9, `Monto: ${money.format(amount)}    Plazo: ${months} meses    TEA: ${tea.toFixed(1)}%`);
+            pageText(42, 730, 9, `Cuota mensual: ${money.format(monthlyPayment)}    Interés total: ${money.format(totalInterest)}    Total a pagar: ${money.format(amount + totalInterest)}`);
+            pageText(42, 712, 8, `Simulación referencial · ${new Intl.DateTimeFormat("es-PE").format(new Date())}`);
+          }
+          const headerTop = isFirstPage ? 690 : 748;
+          drawTableHeader(headerTop, pageText, pageLine);
+          const firstRowY = headerTop - 40;
+          pageRows.forEach((row, index) => {
+            const y = firstRowY - index * 20;
+            const values = [String(row.month), money.format(row.payment), money.format(row.capital), money.format(row.interest), money.format(row.balance)];
+            values.forEach((value, column) => pageText(columns[column] + 4, y, 8, value));
+            pageLine(columns[0], y - 6, columns[5], y - 6);
+          });
+          pageText(470, 25, 8, `Página ${pages.length + 1}`);
+          pages.push(content.join(""));
+          offset += pageRows.length;
+        }
+
+        const bytes = [];
+        const offsets = [0];
+        let length = 0;
+        const append = (value) => {
+          const part = typeof value === "string" ? encode(value) : value;
+          bytes.push(part);
+          length += part.length;
+        };
+        append("%PDF-1.4\n");
+        const pageCount = pages.length;
+        const fontId = 3 + pageCount * 2;
+        const objects = [
+          [1, "<< /Type /Catalog /Pages 2 0 R >>"],
+          [2, `<< /Type /Pages /Kids [${pages.map((_, index) => `${3 + index * 2} 0 R`).join(" ")}] /Count ${pageCount} >>`]
+        ];
+        pages.forEach((page, index) => {
+          const pageId = 3 + index * 2;
+          const streamId = pageId + 1;
+          const stream = encode(page);
+          objects.push([pageId, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 ${fontId} 0 R >> >> /Contents ${streamId} 0 R >>`]);
+          objects.push([streamId, { stream }]);
+        });
+        objects.push([fontId, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"]);
+        objects.forEach(([id, body]) => {
+          offsets[id] = length;
+          append(`${id} 0 obj\n`);
+          if (typeof body === "string") {
+            append(`${body}\nendobj\n`);
+          } else {
+            append(`<< /Length ${body.stream.length} >>\nstream\n`);
+            append(body.stream);
+            append("\nendstream\nendobj\n");
+          }
+        });
+        const xrefOffset = length;
+        append(`xref\n0 ${fontId + 1}\n0000000000 65535 f \n`);
+        for (let id = 1; id <= fontId; id += 1) append(`${String(offsets[id]).padStart(10, "0")} 00000 n \n`);
+        append(`trailer\n<< /Size ${fontId + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`);
+        const pdf = new Uint8Array(length);
+        let position = 0;
+        for (const part of bytes) {
+          pdf.set(part, position);
+          position += part.length;
+        }
+        return new Blob([pdf], { type: "application/pdf" });
       }
 
       function updateEligibility(payment) {
@@ -312,6 +427,28 @@
         button.setAttribute("aria-expanded", String(!expanded));
         $("schedule-panel").hidden = expanded;
         button.querySelector("span:first-child").textContent = expanded ? "Ver cronograma de pagos" : "Ocultar cronograma de pagos";
+      });
+      $("pdf-download").addEventListener("click", () => {
+        const status = $("pdf-status");
+        if (currentSchedule.length === 0) {
+          status.textContent = "Corrige los datos para generar un cronograma válido.";
+          return;
+        }
+        try {
+          const blob = createSchedulePdf();
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `cronograma-credito-${currentSchedule.length}-meses.pdf`;
+          document.body.append(link);
+          link.click();
+          link.remove();
+          window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+          status.textContent = "El cronograma PDF se descargó correctamente.";
+        } catch (error) {
+          status.textContent = "No se pudo generar el PDF. Inténtalo nuevamente.";
+          console.error("No se pudo generar el cronograma PDF:", error);
+        }
       });
       calculate();
     })();
