@@ -1,0 +1,90 @@
+name: Publish CréditoClaro to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Validate standalone site
+        run: |
+          python - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          class SiteParser(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.ids = []
+                  self.external_assets = []
+
+              def handle_starttag(self, tag, attributes):
+                  attributes = dict(attributes)
+                  if "id" in attributes:
+                      self.ids.append(attributes["id"])
+                  if tag == "script" and "src" in attributes:
+                      self.external_assets.append(attributes["src"])
+                  if tag == "link" and attributes.get("rel") == "stylesheet":
+                      self.external_assets.append(attributes.get("href"))
+
+          page = Path("index.html")
+          if not page.is_file():
+              raise SystemExit("index.html is required at the repository root")
+
+          source = page.read_text(encoding="utf-8")
+          parser = SiteParser()
+          parser.feed(source)
+          parser.close()
+
+          if "<!doctype html>" not in source.lower():
+              raise SystemExit("index.html must declare an HTML doctype")
+          if 'lang="es"' not in source:
+              raise SystemExit("index.html must declare Spanish as its language")
+          if len(parser.ids) != len(set(parser.ids)):
+              raise SystemExit("HTML element IDs must be unique")
+          if parser.external_assets:
+              raise SystemExit(f"External assets are not supported: {parser.external_assets}")
+          print("Standalone HTML site validation passed.")
+          PY
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Prepare static site
+        run: |
+          mkdir _site
+          cp index.html _site/index.html
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
